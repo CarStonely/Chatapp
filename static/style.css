@@ -20,57 +20,58 @@ h1 {
 }
 
 /* ----------------------------------
-   HEADER STYLES
+   MODERNIZED HEADER STYLES
 ---------------------------------- */
 .chat-header {
     display: flex;
-    flex-direction: column; /* Stack elements vertically */
-    align-items: flex-end; /* Align to the right edge */
-    position: fixed; /* Keep at the top-right corner of the page */
-    top: 20px; /* Spacing from the top */
-    right: 20px; /* Spacing from the right */
-    padding: 10px;
-    background-color: rgba(255, 255, 255, 0.9);
-    border-radius: 10px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-    z-index: 1000; /* Ensure visibility above other content */
+    flex-direction: column;
+    align-items: flex-end;
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: rgba(255, 255, 255, 0.8);
+    padding: 15px 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
 }
 
 .current-user {
     font-size: 1rem;
     font-weight: bold;
     color: #333;
-    margin-bottom: 10px; /* Space between the label and buttons */
+    margin-bottom: 10px;
 }
 
-/* Buttons container (stacked directly under the label) */
 .button-container {
-    display: flex; /* Still use flex for spacing */
-    gap: 10px; /* Space between buttons */
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
 }
 
-/* Button styles */
 .button {
-    text-decoration: none;
-    padding: 8px 15px;
-    border-radius: 5px;
-    background-color: #4CAF50;
+    padding: 8px 20px;
+    font-size: 1rem;
+    font-weight: bold;
     color: white;
-    font-size: 0.9rem;
-    transition: background-color 0.3s ease;
+    background: #4CAF50;
+    text-decoration: none;
+    border-radius: 8px;
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 .button:hover {
-    background-color: #45a049;
+    background: #3e8e41;
+    box-shadow: 0 6px 10px rgba(0, 0, 0, 0.2);
 }
 
-/* Logout button styling (red for logout) */
 .logout-btn {
-    background-color: #FF4C4C;
+    background: #FF4C4C;
 }
 
 .logout-btn:hover {
-    background-color: #D43F3F;
+    background: #D43F3F;
 }
 /* ----------------------------------
    CHAT PAGE STYLES
@@ -254,3 +255,155 @@ h1 {
     cursor: pointer;
   }
   
+/* Hidden class to hide the modal */
+.hidden {
+    display: none;
+}
+
+/* ----------------------------------
+   MAIN CONTENT STYLES
+---------------------------------- */
+.room-selector-container {
+    margin-top: 120px;
+    padding: 30px;
+    max-width: 900px;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+.room-selector-container h1 {
+    font-size: 2.5rem;
+    color: #4caf50;
+    margin-bottom: 20px;
+}
+
+.room-selector-container p {
+    font-size: 1.2rem;
+    color: #777;
+    margin-bottom: 20px;
+}
+
+.room-list {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 20px;
+    list-style: none;
+    padding: 0;
+}
+
+.room-link {
+    display: block;
+    padding: 15px 25px;
+    border: 2px solid #ddd;
+    border-radius: 10px;
+    background: white;
+    text-decoration: none;
+    color: #4caf50;
+    font-size: 1.2rem;
+    font-weight: bold;
+    transition: all 0.3s ease;
+}
+
+.room-link:hover {
+    background: #4caf50;
+    color: white;
+}
+
+/* ----------------------------------
+   MODAL STYLES
+---------------------------------- */
+.modal {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 2000;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.modal:not(.hidden) {
+    opacity: 1;
+    visibility: visible;
+}
+
+.modal-content {
+    background: white;
+    padding: 30px;
+    border-radius: 10px;
+    text-align: center;
+    width: 90%;
+    max-width: 400px;
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+}
+
+.modal-content h2 {
+    font-size: 2rem;
+    margin-bottom: 20px;
+}
+
+.modal-content form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.modal-content input {
+    padding: 12px;
+    font-size: 1rem;
+    border: 2px solid #ddd;
+    border-radius: 10px;
+    transition: all 0.3s ease;
+}
+
+.modal-content input:focus {
+    border-color: #4caf50;
+    box-shadow: 0 0 10px rgba(76, 175, 80, 0.3);
+}
+
+.modal-content .create-room-submit {
+    background: #4caf50;
+    color: white;
+    padding: 12px 20px;
+    font-size: 1rem;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.modal-content .create-room-submit:hover {
+    background: #45a049;
+}
+
+/* Close Button */
+.close-btn {
+    position: absolute;
+    top: 10px;
+    right: 20px;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #555;
+    transition: color 0.3s ease;
+}
+
+.close-btn:hover {
+    color: #ff4c4c;
+}
+
+/* Footer */
+.footer {
+    margin-top: 20px;
+    font-size: 1rem;
+    color: #555;
+    text-align: center;
+}

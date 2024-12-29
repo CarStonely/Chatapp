@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Choose a Room</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- Header Section -->
+  <header class="chat-header">
+    <div class="header-content">
+      <span class="current-user">Logged in as: <strong>{{ session['username'] }}</strong></span>
+      <div class="button-container">
+        <a href="{{ url_for('login') }}" class="button login-btn">Login</a>
+        <a href="{{ url_for('register') }}" class="button register-btn">Register</a>
+        <a href="{{ url_for('logout') }}" class="button logout-btn">Logout</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="room-selector-container">
+    <h1>Welcome to the Chat Application</h1>
+    <button id="open-modal-btn" class="button create-room-btn">+ Create Room</button>
+    <p>Select a room to join:</p>
+    <ul class="room-list">
+      {% for room in rooms %}
+        <li>
+          <a href="{{ url_for('chat_room', room=room) }}" class="room-link">{{ room }}</a>
+        </li>
+      {% endfor %}
+    </ul>
+  </main>
+
+  <!-- Modal for Creating a Room -->
+  <div id="create-room-modal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content" role="dialog" aria-labelledby="modal-title">
+      <span class="close-btn" id="close-modal" aria-label="Close">&times;</span>
+      <h2 id="modal-title">Create a New Room</h2>
+      <form action="{{ url_for('create_room') }}" method="POST">
+        <label for="room">Room Name:</label>
+        <input type="text" id="room" name="room" placeholder="Enter room name" required maxlength="50">
+        <button type="submit" class="button create-room-submit">Create Room</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <p>&copy; 2024 Chat Application. Built with ❤️ for seamless conversations.</p>
+  </footer>
+
+  <!-- JavaScript -->
+  <script>
+    // Get references to the button and modal elements
+    const openModalBtn = document.getElementById('open-modal-btn');
+    const modal = document.getElementById('create-room-modal');
+    const closeModal = document.getElementById('close-modal');
+
+    // Open the modal when the button is clicked
+    openModalBtn.addEventListener('click', () => {
+      modal.classList.remove('hidden');
+      modal.setAttribute('hidden', 'false');
+    });
+
+    // Close the modal when the "x" button is clicked
+    closeModal.addEventListener('click', () => {
+      modal.classList.add('hidden');
+      modal.setAttribute('hidden', 'true');
+    });
+
+    // Close the modal when clicking outside the modal content
+    window.addEventListener('click', (event) => {
+      if (event.target === modal) {
+        modal.classList.add('hidden');
+        modal.setAttribute('hidden', 'true');
+      }
+    });
+  </script>
+</body>
+</html>

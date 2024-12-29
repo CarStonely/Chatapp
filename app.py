@@ -1,10 +1,10 @@
-from datetime import datetime
-from flask import Flask, render_template, request, redirect, url_for, session
+from flask import Flask, render_template, request, jsonify, redirect, url_for, session
 import mysql.connector
 from flask_bcrypt import Bcrypt
 from flask_socketio import SocketIO, emit, join_room, leave_room
 from dotenv import load_dotenv
 import os
+from datetime import datetime
 
 app = Flask(__name__)
 bcrypt = Bcrypt(app)
@@ -28,26 +28,43 @@ db_config = {
 def home():
     return render_template('home.html')
 
+@app.route('/check_room', methods=['POST'])
+def check_room():
+    data = request.get_json()
+    room_name = data.get('room', '').strip()
+
+    if not room_name:
+        return jsonify({"exists": False, "error": "Room name is empty"}), 400
+
+    conn = mysql.connector.connect(**db_config)
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute("SELECT id FROM rooms WHERE name = %s", (room_name,))
+        exists = cursor.fetchone() is not None
+    finally:
+        cursor.close()
+        conn.close()
+
+    return jsonify({"exists": exists})
+
 @app.route('/chat')
 def chat():
     if 'user_id' not in session:
         return redirect(url_for('login'))
 
-    # Fetch the chat history from the database
     conn = mysql.connector.connect(**db_config)
     cursor = conn.cursor(dictionary=True)
+
     try:
-        cursor.execute("""
-            SELECT username, message, DATE_FORMAT(timestamp, '%Y-%m-%d %H:%i:%s') AS formatted_timestamp
-            FROM messages
-            ORDER BY timestamp ASC
-        """)
-        chat_history = cursor.fetchall()
+        # Fetch all available rooms
+        cursor.execute("SELECT name FROM rooms ORDER BY created_at DESC")
+        rooms = [row['name'] for row in cursor.fetchall()]
     finally:
         cursor.close()
         conn.close()
 
-    return render_template('chat.html', chat_history=chat_history, room='general', rooms=[])  # Pass rooms as empty for this route
+    return render_template('room_selector.html', rooms=rooms)  # Render a room selection page
 
 @app.route('/rooms')
 def rooms():
@@ -69,12 +86,8 @@ def rooms():
 
 @app.route('/create_room', methods=['POST'])
 def create_room():
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
+    room_name = request.form.get('room').strip()
 
-    room_name = request.form['room'].strip()
-
-    # Validate the room name
     if not room_name or len(room_name) > 50:
         return "Invalid room name!", 400
 
@@ -100,7 +113,8 @@ def create_room():
         cursor.close()
         conn.close()
 
-    return redirect(url_for('chat_room', room=room_name))
+    return redirect(url_for('chat'))
+
 
 @app.route('/chat/<room>')
 def chat_room(room):
