@@ -91,3 +91,53 @@ document.getElementById('room-select').addEventListener('change', (event) => {
     document.getElementById('room').value = currentRoom;
   }
 });
+
+// Emit a direct message event
+socket.emit('direct_message', { receiverId, message });
+
+// Listen for incoming DMs
+socket.on('direct_message', (data) => {
+  if (data.senderId === currentUserId || data.receiverId === currentUserId) {
+    // Update the DM UI in real-time
+    loadDmMessages(data.senderId === currentUserId ? data.receiverId : data.senderId);
+  }
+});
+
+document.getElementById('send-dm').addEventListener('click', () => {
+  const message = document.getElementById('dm-message').value.trim();
+  const receiverId = document.getElementById('receiver-id').value; // Hidden input with receiver ID
+
+  if (message) {
+    fetch('/send_dm', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ receiver_id: receiverId, message })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        // Reload message history or append the new message
+        loadDmMessages(receiverId);
+        document.getElementById('dm-message').value = ''; // Clear input
+      }
+    });
+  }
+});
+
+function loadDmMessages(receiverId) {
+  fetch(`/dm/${receiverId}`)
+    .then(response => response.json())
+    .then(messages => {
+      const dmMessages = document.getElementById('dm-messages');
+      dmMessages.innerHTML = ''; // Clear current messages
+      messages.forEach(msg => {
+        const messageElement = document.createElement('div');
+        messageElement.className = 'message';
+        messageElement.innerHTML = `
+          <strong>${msg.sender_id === currentUserId ? 'You' : 'Them'}:</strong>
+          ${msg.message} <span class="timestamp">${msg.formatted_timestamp}</span>
+        `;
+        dmMessages.appendChild(messageElement);
+      });
+    });
+}

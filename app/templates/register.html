@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Login</title>
+  <meta charset="UTF-8" />
+  <title>Register</title>
 
-  <!-- If you use Google Fonts like the chat page, include them here too -->
+  <!-- Google Fonts (if you used them for your chat page) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link 
@@ -12,16 +12,14 @@
     rel="stylesheet"
   />
 
-  <!-- Reference your main styles.css (which now contains both chat + login styles) -->
+  <!-- Reference your unified styles.css -->
   <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
-  <h1>Login</h1>
-
-  <!-- Container for the login form -->
+  <h1>Register</h1>
+  
   <div class="login-container">
-    
-    <!-- Flash/Error messages (optional) -->
+    <!-- Optional: Flash messages for errors like "Username taken" -->
     {% with messages = get_flashed_messages() %}
       {% if messages %}
         <div class="error">
@@ -32,14 +30,14 @@
       {% endif %}
     {% endwith %}
 
-    <form action="{{ url_for('login') }}" method="POST">
+    <form action="{{ url_for('auth.register') }}" method="POST">
       <div>
         <label for="username">Username:</label>
         <input 
           type="text" 
           id="username" 
           name="username" 
-          placeholder="Enter your username"
+          placeholder="Enter a username"
           required
         >
       </div>
@@ -50,17 +48,17 @@
           type="password" 
           id="password" 
           name="password" 
-          placeholder="Enter your password"
+          placeholder="Enter a password"
           required
         >
       </div>
 
-      <button type="submit">Login</button>
+      <button type="submit">Register</button>
     </form>
 
     <p style="margin-top: 1rem;">
-      Don't have an account? 
-      <a href="{{ url_for('register') }}">Register here</a>.
+      Already have an account?
+      <a href="{{ url_for('auth.login') }}">Login here</a>.
     </p>
   </div>
 </body>

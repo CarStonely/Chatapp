@@ -14,9 +14,10 @@
     <div class="header-content">
       <span class="current-user">Logged in as: <strong>{{ session['username'] }}</strong></span>
       <div class="button-container">
-        <a href="{{ url_for('login') }}" class="button login-btn">Login</a>
-        <a href="{{ url_for('register') }}" class="button register-btn">Register</a>
-        <a href="{{ url_for('logout') }}" class="button logout-btn">Logout</a>
+        <!-- Correcting Blueprint Namespacing -->
+        <a href="{{ url_for('auth.login') }}" class="button login-btn">Login</a>
+        <a href="{{ url_for('auth.register') }}" class="button register-btn">Register</a>
+        <a href="{{ url_for('auth.logout') }}" class="button logout-btn">Logout</a>
       </div>
     </div>
   </header>
@@ -29,7 +30,7 @@
     <ul class="room-list">
       {% for room in rooms %}
         <li>
-          <a href="{{ url_for('chat_room', room=room) }}" class="room-link">{{ room }}</a>
+          <a href="{{ url_for('chat.room', room=room) }}" class="room-link">{{ room }}</a>
         </li>
       {% endfor %}
     </ul>
@@ -40,7 +41,7 @@
     <div class="modal-content" role="dialog" aria-labelledby="modal-title">
       <span class="close-btn" id="close-modal" aria-label="Close">&times;</span>
       <h2 id="modal-title">Create a New Room</h2>
-      <form action="{{ url_for('create_room') }}" method="POST">
+      <form action="{{ url_for('rooms.create_room') }}" method="POST">
         <label for="room">Room Name:</label>
         <input type="text" id="room" name="room" placeholder="Enter room name" required maxlength="50">
         <button type="submit" class="button create-room-submit">Create Room</button>
