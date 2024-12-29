@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Register</title>
+
+  <!-- Google Fonts (if you used them for your chat page) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link 
+    href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" 
+    rel="stylesheet"
+  />
+
+  <!-- Reference your unified styles.css -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+  <h1>Register</h1>
+  
+  <div class="login-container">
+    <!-- Optional: Flash messages for errors like "Username taken" -->
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <div class="error">
+          {% for msg in messages %}
+            <p>{{ msg }}</p>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <form action="{{ url_for('register') }}" method="POST">
+      <div>
+        <label for="username">Username:</label>
+        <input 
+          type="text" 
+          id="username" 
+          name="username" 
+          placeholder="Enter a username"
+          required
+        >
+      </div>
+
+      <div>
+        <label for="password">Password:</label>
+        <input 
+          type="password" 
+          id="password" 
+          name="password" 
+          placeholder="Enter a password"
+          required
+        >
+      </div>
+
+      <button type="submit">Register</button>
+    </form>
+
+    <p style="margin-top: 1rem;">
+      Already have an account?
+      <a href="{{ url_for('login') }}">Login here</a>.
+    </p>
+  </div>
+</body>
+</html>

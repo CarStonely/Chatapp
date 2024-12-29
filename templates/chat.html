@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Chatroom: {{ room }}</title>
+
+  <!-- Google Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link 
+    href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" 
+    rel="stylesheet" 
+  />
+
+  <!-- Use url_for to link to static CSS -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+  <!-- Socket.IO -->
+  <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+</head>
+<body>
+<!-- Header Section -->
+<header class="chat-header">
+  <!-- Current User and Dropdown -->
+  <div class="header-info">
+    <span class="current-user">
+      Current User: <strong>{{ session['username'] }}</strong>
+    </span>
+    
+    <!-- Dropdown for Room Selection -->
+<form id="room-form" action="" method="GET" class="room-selector">
+  <label for="room-select">Switch Room:</label>
+  <select id="room-select" name="room">
+    {% for available_room in rooms %}
+      <option value="{{ available_room }}" {% if available_room == room %}selected{% endif %}>
+        {{ available_room }}
+      </option>
+    {% endfor %}
+  </select>
+</form>
+
+<script>
+  document.getElementById('room-select').addEventListener('change', (event) => {
+    const selectedRoom = event.target.value;
+    const form = document.getElementById('room-form');
+    form.action = `/chat/${selectedRoom}`; // Update the form action
+    form.submit(); // Automatically submit the form
+  });
+</script>
+
+    <!-- Buttons for Login/Logout/Register -->
+    <div class="button-container">
+      <a href="{{ url_for('login') }}" class="button login-btn">Login</a>
+      <a href="{{ url_for('register') }}" class="button register-btn">Register</a>
+      <a href="{{ url_for('logout') }}" class="button logout-btn">Logout</a>
+    </div>
+  </div>
+</header>
+
+<h1>Chatroom: {{ room }}</h1>
+
+<!-- Hidden input for the current user's username -->
+<input type="hidden" id="current-username" value="{{ session['username'] }}">
+<input type="hidden" id="room" value="{{ room }}">
+
+<!-- Messages -->
+<div id="messages">
+  {% for message in chat_history %}
+    <div class="message {% if message.username == session['username'] %}current-user{% endif %}">
+      <span class="username">{{ message.username }}:</span>
+      <span>{{ message.message }}</span>
+      <span class="timestamp">{{ message.timestamp }}</span>
+    </div>
+  {% endfor %}
+</div>
+
+<!-- Inputs & Send Button -->
+<div class="chat-container">
+  <input type="text" id="message" placeholder="Your message" />
+  <button id="send">Send</button>
+</div>
+
+<!-- Auto-scroll to bottom on load -->
+<script>
+  const socket = io();
+  const room = document.getElementById('room').value;
+
+  // Join the room
+  socket.emit('join', { room });
+
+  window.onload = function () {
+    const messagesContainer = document.getElementById('messages');
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+  };
+
+  // Handle incoming messages
+  socket.on('message', (data) => {
+    const messagesContainer = document.getElementById('messages');
+    const messageElement = document.createElement('div');
+    messageElement.classList.add('message');
+    if (data.user === document.getElementById('current-username').value) {
+      messageElement.classList.add('current-user');
+    }
+    messageElement.innerHTML = `
+      <span class="username">${data.user}:</span>
+      <span>${data.message}</span>
+      <span class="timestamp">${new Date(data.timestamp).toLocaleTimeString()}</span>
+    `;
+    messagesContainer.appendChild(messageElement);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+  });
+
+  // Emit message
+  document.getElementById('send').addEventListener('click', () => {
+    const message = document.getElementById('message').value.trim();
+    if (message) {
+      socket.emit('message', { message, room });
+      document.getElementById('message').value = '';
+    }
+  });
+</script>
+</body>
+</html>
