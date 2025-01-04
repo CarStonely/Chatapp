@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ user.username }}'s Profile</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <h1>{{ user.username }}'s Profile</h1>
+  <div class="profile-container">
+    <img src="{{ user.profile_picture or '/static/images/default_avatar.png' }}" alt="Profile Picture" class="profile-avatar">
+    <div class="bio-preview">
+      <h3>Bio:</h3>
+      <p>{{ user.bio or "No bio provided." }}</p>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,3 +1,4 @@
+from datetime import timedelta
 from flask import Flask
 from flask_bcrypt import Bcrypt
 from flask_socketio import SocketIO
@@ -12,7 +13,14 @@ def create_app():
     load_dotenv()
     app.secret_key = os.getenv('SECRET_KEY')
 
-    # Configure MySQL connection
+
+    # Secure session cookie settings
+    app.config['SESSION_COOKIE_SECURE'] = True  # Send cookies over HTTPS only
+    app.config['SESSION_COOKIE_HTTPONLY'] = True  # Prevent JavaScript access
+    app.config['SESSION_COOKIE_SAMESITE'] = 'Strict'  # Mitigate CSRF
+    app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)  # Session timeout
+
+    # Database configuration
     app.config['DB_CONFIG'] = {
         'host': os.getenv('DB_HOST'),
         'user': os.getenv('DB_USER'),
@@ -25,7 +33,7 @@ def create_app():
     socketio.init_app(app)
 
     # Register blueprints
-    from app.routes import blueprints  # Import blueprints from routes/__init__.py
+    from app.routes import blueprints
     for bp in blueprints:
         app.register_blueprint(bp)
 

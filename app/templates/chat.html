@@ -20,6 +20,7 @@
   <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
 </head>
 <body>
+
 <!-- Header Section -->
 <header class="chat-header">
   <!-- Current User and Dropdown -->
@@ -29,45 +30,56 @@
     </span>
     
     <!-- Dropdown for Room Selection -->
-<form id="room-form" action="" method="GET" class="room-selector">
-  <label for="room-select">Switch Room:</label>
-  <select id="room-select" name="room">
-    {% for available_room in rooms %}
-      <option value="{{ available_room }}" {% if available_room == room %}selected{% endif %}>
-        {{ available_room }}
-      </option>
-    {% endfor %}
-  </select>
-</form>
+    <form id="room-form" action="" method="GET" class="room-selector">
+      <label for="room-select">Switch Room:</label>
+      <select id="room-select" name="room">
+        {% for available_room in rooms %}
+          <option value="{{ available_room }}" {% if available_room == room %}selected{% endif %}>
+            {{ available_room }}
+          </option>
+        {% endfor %}
+      </select>
+    </form>
 
-<script>
-  document.getElementById('room-select').addEventListener('change', (event) => {
-    const selectedRoom = event.target.value;
-    const form = document.getElementById('room-form');
-    form.action = `/chat/${selectedRoom}`; // Update the form action
-    form.submit(); // Automatically submit the form
-  });
-</script>
+    <script>
+      // Handle full page reload to switch rooms
+      document.getElementById('room-select').addEventListener('change', (event) => {
+        const selectedRoom = event.target.value;
+        const form = document.getElementById('room-form');
+        // Redirect to the new room (server-side route: /<selectedRoom>)
+        form.action = `/${selectedRoom}`;
+        form.submit();
+      });
+    </script>
 
-    <!-- Buttons for Login/Logout/Register -->
+    <!-- Buttons for Login/Logout/Register/Profile/Room Selector -->
     <div class="button-container">
-      <a href="{{ url_for('auth.login') }}" class="button login-btn">Login</a>
-      <a href="{{ url_for('auth.register') }}" class="button register-btn">Register</a>
-      <a href="{{ url_for('auth.logout') }}" class="button logout-btn">Logout</a>
+      {% if 'user_id' in session %}
+        <!-- If logged in, show logout and profile -->
+        <a href="{{ url_for('auth.profile') }}" class="button profile-btn">Profile</a>
+        <a href="{{ url_for('auth.logout') }}" class="button logout-btn">Logout</a>
+      {% else %}
+        <!-- If not logged in, show login/register -->
+        <a href="{{ url_for('auth.login') }}" class="button login-btn">Login</a>
+        <a href="{{ url_for('auth.register') }}" class="button register-btn">Register</a>
+      {% endif %}
+
+      <a href="{{ url_for('chat.index') }}" class="button select-room-btn">Room Selector</a>
     </div>
   </div>
 </header>
 
 <h1>Chatroom: {{ room }}</h1>
 
-<!-- Hidden input for the current user's username -->
+<!-- Hidden input for the current user's username and current room -->
 <input type="hidden" id="current-username" value="{{ session['username'] }}">
 <input type="hidden" id="room" value="{{ room }}">
 
-<!-- Messages -->
+<!-- Messages Container -->
 <div id="messages">
   {% for message in chat_history %}
     <div class="message {% if message.username == session['username'] %}current-user{% endif %}">
+      <img src="{{ message.profile_picture }}" alt="{{ message.username }}'s avatar" class="avatar">
       <span class="username">{{ message.username }}:</span>
       <span>{{ message.message }}</span>
       <span class="timestamp">{{ message.timestamp }}</span>
@@ -75,48 +87,140 @@
   {% endfor %}
 </div>
 
-<!-- Inputs & Send Button -->
+<!-- Optional: Real-Time Typing Indicator -->
+<div id="typing-indicator" style="display: none; font-style: italic; margin-top: 5px;">
+  <!-- e.g. "Alice is typing..." -->
+</div>
+
+<!-- Chat Controls -->
 <div class="chat-container">
   <input type="text" id="message" placeholder="Your message" />
   <button id="send">Send</button>
 </div>
 
-<!-- Auto-scroll to bottom on load -->
+
+
 <script>
+  // Initialize Socket.IO
   const socket = io();
   const room = document.getElementById('room').value;
+  const currentUser = document.getElementById('current-username').value;
 
-  // Join the room
+  // Escape HTML to help prevent XSS
+  function escapeHTML(str) {
+    const div = document.createElement('div');
+    div.appendChild(document.createTextNode(str));
+    return div.innerHTML;
+  }
+
+  // Join the room on page load
   socket.emit('join', { room });
 
+  // Scroll to bottom on initial load
   window.onload = function () {
     const messagesContainer = document.getElementById('messages');
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
   };
 
-  // Handle incoming messages
+  // Universal function to send a message
+  function sendMessage() {
+    const msgInput = document.getElementById('message');
+    const text = msgInput.value.trim();
+    if (!text) return;
+
+    // (Optional) Immediately stop typing once the message is sent
+    stopTyping();
+
+    socket.emit('message', { message: text, room });
+    msgInput.value = '';
+  }
+
+  // Send message on "Send" button click
+  document.getElementById('send').addEventListener('click', sendMessage);
+
+  // Send message on "Enter" key press
+  document.getElementById('message').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      sendMessage();
+    }
+  });
+
+  // Listen for incoming messages
   socket.on('message', (data) => {
     const messagesContainer = document.getElementById('messages');
+
     const messageElement = document.createElement('div');
     messageElement.classList.add('message');
-    if (data.user === document.getElementById('current-username').value) {
+    if (data.user === currentUser) {
       messageElement.classList.add('current-user');
     }
-    messageElement.innerHTML = `
-      <span class="username">${data.user}:</span>
-      <span>${data.message}</span>
-      <span class="timestamp">${new Date(data.timestamp).toLocaleTimeString()}</span>
-    `;
+
+    // Create avatar image
+    const avatar = document.createElement('img');
+    avatar.src = data.profile_picture || '/static/images/default_avatar.png';
+    avatar.alt = escapeHTML(data.user) + "'s avatar";
+    avatar.classList.add('avatar');
+
+    // Create username span
+    const usernameSpan = document.createElement('span');
+    usernameSpan.classList.add('username');
+    usernameSpan.textContent = escapeHTML(data.user) + ": ";
+
+    // Create message text span
+    const textSpan = document.createElement('span');
+    textSpan.textContent = escapeHTML(data.message);
+
+    // Create timestamp span
+    const timestampSpan = document.createElement('span');
+    timestampSpan.classList.add('timestamp');
+    timestampSpan.textContent = new Date(data.timestamp).toLocaleTimeString();
+
+    // Append elements to message container
+    messageElement.appendChild(avatar);
+    messageElement.appendChild(usernameSpan);
+    messageElement.appendChild(textSpan);
+    messageElement.appendChild(timestampSpan);
+
+    // Append the message to the chat
     messagesContainer.appendChild(messageElement);
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
   });
 
-  // Emit message
-  document.getElementById('send').addEventListener('click', () => {
-    const message = document.getElementById('message').value.trim();
-    if (message) {
-      socket.emit('message', { message, room });
-      document.getElementById('message').value = '';
+  /* ==============================
+     TYPING INDICATORS (Optional)
+  ============================== */
+  const typingIndicator = document.getElementById('typing-indicator');
+  let typing = false;
+  let typingTimeout;
+
+  // Trigger "startTyping" whenever user types
+  document.getElementById('message').addEventListener('input', () => {
+    if (!typing) {
+      typing = true;
+      socket.emit('typing', { room });
+    }
+
+    clearTimeout(typingTimeout);
+    typingTimeout = setTimeout(stopTyping, 3000); // after 3s of no input
+  });
+
+  function stopTyping() {
+    if (typing) {
+      typing = false;
+      socket.emit('stop_typing', { room });
+    }
+  }
+
+  // When others in the room are typing
+  socket.on('user_typing', (data) => {
+    const { username, action } = data;
+    if (action === 'typing') {
+      typingIndicator.textContent = `${username} is typing...`;
+      typingIndicator.style.display = 'block';
+    } else if (action === 'stopped') {
+      typingIndicator.textContent = '';
+      typingIndicator.style.display = 'none';
     }
   });
 </script>

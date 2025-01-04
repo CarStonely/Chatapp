@@ -1,143 +1,152 @@
 // Connect to the Socket.IO server
 const socket = io();
 
-// Get the current user's username and room name from hidden elements
+// Grab references to key DOM elements
 const currentUsername = document.getElementById('current-username').value;
-let currentRoom = document.getElementById('room').value; // Use `let` to allow room switching
+let currentRoom = document.getElementById('room').value; 
+const messageInput = document.getElementById('message');
+const sendButton = document.getElementById('send');
+const messagesContainer = document.getElementById('messages');
+const roomSelect = document.getElementById('room-select');
+const roomHiddenInput = document.getElementById('room');
 
-// Join the specified chat room when the page loads
+// Typing indicator
+const typingIndicator = document.getElementById('typing-indicator'); 
+// e.g. <div id="typing-indicator" style="display:none;"></div> in your HTML
+
+let typing = false;
+let typingTimeout;
+
+// Join the specified chat room on page load
 socket.emit('join', { room: currentRoom });
 
-// Listen for messages from the server
-socket.on('message', (data) => {
-  const messagesContainer = document.getElementById('messages');
-  const messageElement = document.createElement('div');
+// Send a message
+function sendMessage() {
+  const message = messageInput.value.trim();
+  if (message) {
+    // Immediately stop typing
+    stopTyping();
+    socket.emit('message', { message, room: currentRoom });
+    messageInput.value = ''; // Clear the input field
+  }
+}
 
-  // Add message classes based on the user
+// Listen for click on the "Send" button
+sendButton.addEventListener('click', () => {
+  sendMessage();
+});
+
+// (Optional) Listen for "Enter" key to send message
+messageInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    sendMessage();
+  }
+});
+
+// ===== TYPING INDICATOR LOGIC =====
+function startTyping() {
+  if (!typing) {
+    typing = true;
+    socket.emit('typing', { room: currentRoom });
+  }
+  clearTimeout(typingTimeout);
+  typingTimeout = setTimeout(stopTyping, 3000);
+}
+
+function stopTyping() {
+  if (typing) {
+    typing = false;
+    socket.emit('stop_typing', { room: currentRoom });
+  }
+}
+// Trigger startTyping on each key press
+messageInput.addEventListener('input', () => {
+  if (messageInput.value.length > 0) {
+    startTyping();
+  } else {
+    // If user deletes everything, we can immediately stop
+    stopTyping();
+  }
+});
+
+// Handle room selection changes (dynamic Socket.IO approach)
+roomSelect.addEventListener('change', (event) => {
+  const newRoom = event.target.value;
+  if (newRoom !== currentRoom) {
+    socket.emit('leave', { room: currentRoom });
+    currentRoom = newRoom;
+    socket.emit('join', { room: currentRoom });
+    messagesContainer.innerHTML = '';
+    roomHiddenInput.value = currentRoom;
+  }
+});
+
+// Listen for user joining notifications
+socket.on('notification', (data) => {
+  const notificationElement = document.createElement('div');
+  notificationElement.classList.add('notification');
+  notificationElement.textContent = `${data.user} has joined the room.`;
+  messagesContainer.appendChild(notificationElement);
+  messagesContainer.scrollTop = messagesContainer.scrollHeight;
+});
+
+// Listen for user leaving notifications
+socket.on('leave-notification', (data) => {
+  const notificationElement = document.createElement('div');
+  notificationElement.classList.add('notification');
+  notificationElement.textContent = `${data.user} has left the room.`;
+  messagesContainer.appendChild(notificationElement);
+  messagesContainer.scrollTop = messagesContainer.scrollHeight;
+});
+
+// Listen for incoming messages
+socket.on('message', (data) => {
+  const messageElement = document.createElement('div');
   messageElement.classList.add('message');
+  
   if (data.user === currentUsername) {
     messageElement.classList.add('current-user');
   }
 
-  // Format and add the message with timestamp
-  const timestamp = new Date(data.timestamp).toLocaleString('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: true,
-  });
+  // Create avatar element
+  const avatar = document.createElement('img');
+  avatar.src = data.profile_picture || '/static/images/default_avatar.png';
+  avatar.alt = `${data.user}'s avatar`;
+  avatar.classList.add('avatar');
 
-  messageElement.innerHTML = `
-    <span class="username">${data.user}:</span>
+  // Create message content
+  const content = document.createElement('div');
+  content.innerHTML = `
+    <span class="username">${data.user}</span>:
     <span>${data.message}</span>
-    <span class="timestamp">${timestamp}</span>
+    <span class="timestamp">${new Date(data.timestamp).toLocaleTimeString()}</span>
   `;
 
-  // Append the message and scroll to the bottom
+  messageElement.appendChild(avatar);
+  messageElement.appendChild(content);
+
+  // Append to container and auto-scroll
   messagesContainer.appendChild(messageElement);
   messagesContainer.scrollTop = messagesContainer.scrollHeight;
 });
 
-// Emit a message when the user sends one
-document.getElementById('send').addEventListener('click', () => {
-  const message = document.getElementById('message').value.trim();
-
-  if (message) {
-    const currentRoom = document.getElementById('room').value; // Get the current room name
-    socket.emit('message', { message, room: currentRoom });
-    document.getElementById('message').value = ''; // Clear input field
+// ===== RECEIVING TYPING UPDATES =====
+socket.on('user_typing', (data) => {
+  const { username, action } = data;
+  if (action === 'typing') {
+    // Show "username is typing..." 
+    typingIndicator.innerText = `${username} is typing...`;
+    typingIndicator.style.display = 'block';
+  } else if (action === 'stopped') {
+    typingIndicator.innerText = '';
+    typingIndicator.style.display = 'none';
   }
 });
 
-
-// Listen for notifications when the user joins a room
-socket.on('notification', (data) => {
-  const messagesContainer = document.getElementById('messages');
-  const notificationElement = document.createElement('div');
-
-  notificationElement.classList.add('notification');
-  notificationElement.textContent = `${data.user} has joined the room.`;
-
-  messagesContainer.appendChild(notificationElement);
-  messagesContainer.scrollTop = messagesContainer.scrollHeight;
-});
-
-// Listen for notifications when the user leaves a room
-socket.on('leave-notification', (data) => {
-  const messagesContainer = document.getElementById('messages');
-  const notificationElement = document.createElement('div');
-
-  notificationElement.classList.add('notification');
-  notificationElement.textContent = `${data.user} has left the room.`;
-
-  messagesContainer.appendChild(notificationElement);
-  messagesContainer.scrollTop = messagesContainer.scrollHeight;
-});
-
-// Handle room selection changes for switching rooms dynamically
-document.getElementById('room-select').addEventListener('change', (event) => {
-  const newRoom = event.target.value;
-
-  if (newRoom !== currentRoom) {
-    // Leave the current room
-    socket.emit('leave', { room: currentRoom });
-
-    // Update current room and join the new one
-    currentRoom = newRoom;
-    socket.emit('join', { room: currentRoom });
-
-    // Clear message history and update room display
-    document.getElementById('messages').innerHTML = '';
-    document.getElementById('room').value = currentRoom;
+// Example: handle a click on a username
+document.addEventListener('click', (event) => {
+  if (event.target.classList.contains('username')) {
+    console.log(`Username link clicked: ${event.target.textContent}`);
   }
 });
-
-// Emit a direct message event
-socket.emit('direct_message', { receiverId, message });
-
-// Listen for incoming DMs
-socket.on('direct_message', (data) => {
-  if (data.senderId === currentUserId || data.receiverId === currentUserId) {
-    // Update the DM UI in real-time
-    loadDmMessages(data.senderId === currentUserId ? data.receiverId : data.senderId);
-  }
-});
-
-document.getElementById('send-dm').addEventListener('click', () => {
-  const message = document.getElementById('dm-message').value.trim();
-  const receiverId = document.getElementById('receiver-id').value; // Hidden input with receiver ID
-
-  if (message) {
-    fetch('/send_dm', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ receiver_id: receiverId, message })
-    })
-    .then(response => response.json())
-    .then(data => {
-      if (data.success) {
-        // Reload message history or append the new message
-        loadDmMessages(receiverId);
-        document.getElementById('dm-message').value = ''; // Clear input
-      }
-    });
-  }
-});
-
-function loadDmMessages(receiverId) {
-  fetch(`/dm/${receiverId}`)
-    .then(response => response.json())
-    .then(messages => {
-      const dmMessages = document.getElementById('dm-messages');
-      dmMessages.innerHTML = ''; // Clear current messages
-      messages.forEach(msg => {
-        const messageElement = document.createElement('div');
-        messageElement.className = 'message';
-        messageElement.innerHTML = `
-          <strong>${msg.sender_id === currentUserId ? 'You' : 'Them'}:</strong>
-          ${msg.message} <span class="timestamp">${msg.formatted_timestamp}</span>
-        `;
-        dmMessages.appendChild(messageElement);
-      });
-    });
-}

@@ -4,20 +4,37 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Choose a Room</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  
+  <!-- Google Fonts & CSS -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <link 
+    href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" 
+    rel="stylesheet"
+  >
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
   <!-- Header Section -->
   <header class="chat-header">
     <div class="header-content">
-      <span class="current-user">Logged in as: <strong>{{ session['username'] }}</strong></span>
+      <span class="current-user">
+        {% if 'username' in session %}
+          Logged in as: <strong>{{ session['username'] }}</strong>
+        {% else %}
+          You are not logged in.
+        {% endif %}
+      </span>
+
       <div class="button-container">
-        <!-- Correcting Blueprint Namespacing -->
-        <a href="{{ url_for('auth.login') }}" class="button login-btn">Login</a>
-        <a href="{{ url_for('auth.register') }}" class="button register-btn">Register</a>
-        <a href="{{ url_for('auth.logout') }}" class="button logout-btn">Logout</a>
+        {% if 'user_id' in session %}
+          <!-- If logged in, show Profile/Logout -->
+          <a href="{{ url_for('auth.profile') }}" class="button profile-btn">Profile</a>
+          <a href="{{ url_for('auth.logout') }}" class="button logout-btn">Logout</a>
+        {% else %}
+          <!-- If not logged in, show Login/Register -->
+          <a href="{{ url_for('auth.login') }}" class="button login-btn">Login</a>
+          <a href="{{ url_for('auth.register') }}" class="button register-btn">Register</a>
+        {% endif %}
       </div>
     </div>
   </header>
@@ -25,25 +42,54 @@
   <!-- Main Content -->
   <main class="room-selector-container">
     <h1>Welcome to the Chat Application</h1>
+
+    <!-- Create Room Button -->
     <button id="open-modal-btn" class="button create-room-btn">+ Create Room</button>
+
     <p>Select a room to join:</p>
     <ul class="room-list">
       {% for room in rooms %}
         <li>
+          <!-- Link to the chosen room -->
           <a href="{{ url_for('chat.room', room=room) }}" class="room-link">{{ room }}</a>
         </li>
       {% endfor %}
     </ul>
   </main>
 
-  <!-- Modal for Creating a Room -->
-  <div id="create-room-modal" class="modal hidden" aria-hidden="true">
-    <div class="modal-content" role="dialog" aria-labelledby="modal-title">
-      <span class="close-btn" id="close-modal" aria-label="Close">&times;</span>
+  <!-- Modal for Creating a Room (Initially hidden) -->
+  <!-- Use both the 'hidden' attribute (for visual/collapsing in many browsers) and 'aria-hidden' for screen readers -->
+  <div 
+    id="create-room-modal" 
+    class="modal hidden" 
+    hidden 
+    aria-hidden="true" 
+    role="dialog" 
+    aria-modal="true" 
+    aria-labelledby="modal-title"
+  >
+    <div class="modal-content">
+      <button 
+        class="close-btn" 
+        id="close-modal" 
+        aria-label="Close dialog"
+      >
+        &times;
+      </button>
+      
       <h2 id="modal-title">Create a New Room</h2>
+
+      <!-- The form posts to the route handling room creation -->
       <form action="{{ url_for('rooms.create_room') }}" method="POST">
         <label for="room">Room Name:</label>
-        <input type="text" id="room" name="room" placeholder="Enter room name" required maxlength="50">
+        <input 
+          type="text" 
+          id="room" 
+          name="room" 
+          placeholder="Enter room name" 
+          required 
+          maxlength="50"
+        >
         <button type="submit" class="button create-room-submit">Create Room</button>
       </form>
     </div>
@@ -56,28 +102,36 @@
 
   <!-- JavaScript -->
   <script>
-    // Get references to the button and modal elements
+    // Grab references to relevant DOM elements
     const openModalBtn = document.getElementById('open-modal-btn');
     const modal = document.getElementById('create-room-modal');
-    const closeModal = document.getElementById('close-modal');
+    const closeModalBtn = document.getElementById('close-modal');
 
-    // Open the modal when the button is clicked
-    openModalBtn.addEventListener('click', () => {
+    // Show the modal
+    function openModal() {
       modal.classList.remove('hidden');
-      modal.setAttribute('hidden', 'false');
-    });
+      modal.removeAttribute('hidden');       // remove hidden attribute
+      modal.setAttribute('aria-hidden', 'false');
+    }
 
-    // Close the modal when the "x" button is clicked
-    closeModal.addEventListener('click', () => {
+    // Hide the modal
+    function hideModal() {
       modal.classList.add('hidden');
-      modal.setAttribute('hidden', 'true');
-    });
+      modal.setAttribute('hidden', '');      // sets hidden attribute
+      modal.setAttribute('aria-hidden', 'true');
+    }
 
-    // Close the modal when clicking outside the modal content
+    // Event: Open the modal
+    openModalBtn.addEventListener('click', openModal);
+
+    // Event: Close the modal when user clicks the 'x' button
+    closeModalBtn.addEventListener('click', hideModal);
+
+    // Event: Close the modal if clicking outside the modal content
     window.addEventListener('click', (event) => {
+      // Only close if the user clicked on the background (the modal overlay)
       if (event.target === modal) {
-        modal.classList.add('hidden');
-        modal.setAttribute('hidden', 'true');
+        hideModal();
       }
     });
   </script>

@@ -1,65 +1,82 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Register</title>
-
-  <!-- Google Fonts (if you used them for your chat page) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link 
-    href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" 
-    rel="stylesheet"
-  />
-
-  <!-- Reference your unified styles.css -->
-  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='LoginStyles.css') }}">
+  <!-- Optional Font Awesome for Icons -->
+  <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
 </head>
 <body>
-  <h1>Register</h1>
-  
-  <div class="login-container">
-    <!-- Optional: Flash messages for errors like "Username taken" -->
-    {% with messages = get_flashed_messages() %}
-      {% if messages %}
-        <div class="error">
-          {% for msg in messages %}
-            <p>{{ msg }}</p>
-          {% endfor %}
+  <div class="login-page">
+    <div class="login-card">
+      <h1>Register</h1>
+
+      <!-- Flash Messages -->
+      {% with messages = get_flashed_messages(with_categories=True) %}
+        {% if messages %}
+          <div class="flash-messages">
+            {% for category, msg in messages %}
+              <div class="flash-message {{ category }}">
+                <p>{{ msg }}</p>
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+
+      <!-- Registration Form -->
+      <form action="{{ url_for('auth.register') }}" method="POST" class="login-form">
+        
+        <!-- Email Field -->
+        <div class="form-group">
+          <label for="email"><i class="fas fa-envelope"></i> Email</label>
+          <input 
+            type="email" 
+            id="email" 
+            name="email" 
+            placeholder="Enter your email" 
+            required
+          >
         </div>
-      {% endif %}
-    {% endwith %}
 
-    <form action="{{ url_for('auth.register') }}" method="POST">
-      <div>
-        <label for="username">Username:</label>
-        <input 
-          type="text" 
-          id="username" 
-          name="username" 
-          placeholder="Enter a username"
-          required
-        >
-      </div>
+        <!-- Username Field -->
+        <div class="form-group">
+          <label for="username"><i class="fas fa-user"></i> Username</label>
+          <input 
+            type="text" 
+            id="username" 
+            name="username" 
+            placeholder="Enter a username" 
+            required
+          >
+        </div>
 
-      <div>
-        <label for="password">Password:</label>
-        <input 
-          type="password" 
-          id="password" 
-          name="password" 
-          placeholder="Enter a password"
-          required
-        >
-      </div>
+        <!-- Password Field -->
+        <div class="form-group">
+          <label for="password"><i class="fas fa-lock"></i> Password</label>
+          <input 
+            type="password" 
+            id="password" 
+            name="password" 
+            placeholder="Enter a password" 
+            required
+          >
+        </div>
 
-      <button type="submit">Register</button>
-    </form>
+        <!-- Submit Button -->
+        <button type="submit" class="btn-primary">Register</button>
+      </form>
 
-    <p style="margin-top: 1rem;">
-      Already have an account?
-      <a href="{{ url_for('auth.login') }}">Login here</a>.
-    </p>
+      <p class="text-center">
+        Already have an account? 
+        <a href="{{ url_for('auth.login') }}">Login here</a>.
+      </p>
+    </div>
   </div>
 </body>
 </html>
