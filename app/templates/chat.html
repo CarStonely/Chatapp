@@ -2,227 +2,160 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Chatroom: {{ room }}</title>
-
-  <!-- Google Font -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <!-- Favicon -->
+  <link rel="icon" href="/static/images/favicon.ico" type="image/x-icon" />
+  
+  <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link 
     href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" 
     rel="stylesheet" 
   />
 
-  <!-- Use url_for to link to static CSS -->
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <!-- Bootstrap CSS for Spinners and Tooltips -->
+  <link 
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" 
+    rel="stylesheet" 
+    integrity="sha384-ENjdO4Dr2bkBIFxQpeoY6b4UKr3oBlb2qz2H3zjE5R1nldoR4o9Bs0R0LqBMU8Y+" 
+    crossorigin="anonymous"
+  />
 
+  <!-- External CSS -->
+  <link rel="stylesheet" href="/static/css/chat.css" />
+  
   <!-- Socket.IO -->
   <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
 </head>
 <body>
 
-<!-- Header Section -->
-<header class="chat-header">
-  <!-- Current User and Dropdown -->
-  <div class="header-info">
-    <span class="current-user">
-      Current User: <strong>{{ session['username'] }}</strong>
-    </span>
-    
-    <!-- Dropdown for Room Selection -->
-    <form id="room-form" action="" method="GET" class="room-selector">
-      <label for="room-select">Switch Room:</label>
-      <select id="room-select" name="room">
-        {% for available_room in rooms %}
-          <option value="{{ available_room }}" {% if available_room == room %}selected{% endif %}>
-            {{ available_room }}
-          </option>
-        {% endfor %}
-      </select>
-    </form>
-
-    <script>
-      // Handle full page reload to switch rooms
-      document.getElementById('room-select').addEventListener('change', (event) => {
-        const selectedRoom = event.target.value;
-        const form = document.getElementById('room-form');
-        // Redirect to the new room (server-side route: /<selectedRoom>)
-        form.action = `/${selectedRoom}`;
-        form.submit();
-      });
-    </script>
-
-    <!-- Buttons for Login/Logout/Register/Profile/Room Selector -->
-    <div class="button-container">
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="navbar-brand" onclick="window.location.href='{{ url_for('chat.index') }}'">ChatApp</div>
+    <div class="navbar-toggler">&#9776;</div>
+    <div class="navbar-menu">
+      <span>Logged in as:  <strong>{{ session['username'] }}</strong></span>
       {% if 'user_id' in session %}
-        <!-- If logged in, show logout and profile -->
-        <a href="{{ url_for('auth.profile') }}" class="button profile-btn">Profile</a>
-        <a href="{{ url_for('auth.logout') }}" class="button logout-btn">Logout</a>
+        <a href="{{ url_for('auth.profile') }}">Profile</a>
+        <a href="{{ url_for('auth.logout') }}">Logout</a>
       {% else %}
-        <!-- If not logged in, show login/register -->
-        <a href="{{ url_for('auth.login') }}" class="button login-btn">Login</a>
-        <a href="{{ url_for('auth.register') }}" class="button register-btn">Register</a>
+        <a href="{{ url_for('auth.login') }}">Login</a>
+        <a href="{{ url_for('auth.register') }}">Register</a>
       {% endif %}
+      <a href="{{ url_for('chat.index') }}">Room Selector</a>
+    </div>
+  </nav>
 
-      <a href="{{ url_for('chat.index') }}" class="button select-room-btn">Room Selector</a>
+  <!-- Main Container -->
+  <div class="container">
+    <!-- Chat Header -->
+    <div class="chat-header">
+      {% if dm_display_name %}
+        <h1>{{ dm_display_name }}</h1>
+      {% else %}
+        <h1>Welcome to {{ room }}</h1>
+      {% endif %}
+    </div>
+    <!-- Room Selection (Optional for DMs) -->
+    {% if rooms and rooms|length > 0 %}
+    <div class="room-selection">
+      <form id="room-form">
+        <label for="room-select">Switch Room:</label>
+        <select id="room-select">
+          {% for available_room in rooms %}
+            <option value="{{ available_room }}" {% if available_room == room %}selected{% endif %}>
+              {{ available_room }}
+            </option>
+          {% endfor %}
+        </select>
+      </form>
+    </div>
+    {% endif %}
+
+    <!-- Chat Content -->
+    <div class="chat-content">
+      <!-- Side Container for User List -->
+      <div class="online-users">
+        <h2>Users</h2>
+        <div id="online-users-loading" class="loading-overlay">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading users...</span>
+          </div>
+        </div>
+        <ul id="online-users">
+          {% for user in all_users %}
+            <li data-username="{{ user.username }}" class="d-flex align-items-center mb-3" style="cursor:pointer;">
+              <a href="/profile/{{ user.username }}" data-bs-toggle="tooltip" data-bs-placement="top" title="{{ user.username }}">
+                <img src="{{ user.profile_picture or '/static/images/default_avatar.png' }}" alt="{{ user.username }}'s avatar" class="avatar" style="width:40px;height:40px;margin-right:0.75rem;">
+              </a>
+              <span class="username">{{ user.username }}</span>
+              <span class="status-indicator" style="display:none;"></span>
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+
+      <!-- Messages Section -->
+      <div class="messages-section">
+        <!-- Loading Indicator for Messages -->
+        <div id="messages-loading" class="loading-overlay">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading messages...</span>
+          </div>
+        </div>
+
+        <div id="messages" class="messages">
+          {% for message in chat_history %}
+            <div class="message {% if message.username == session['username'] %}current-user{% endif %}">
+              {% if message.username != session['username'] %}
+                <a href="{{ url_for('auth.view_profile', username=message.username) }}">
+                  <img src="{{ message.profile_picture }}" alt="{{ message.username }}'s avatar" class="avatar" data-bs-toggle="tooltip" data-bs-placement="top" title="{{ message.username }}">
+                </a>
+              {% endif %}
+              <div class="message-content">
+                <div class="message-header">
+                  <a href="{{ url_for('auth.view_profile', username=message.username) }}" class="username" data-bs-toggle="tooltip" data-bs-placement="top" title="{{ message.username }}">
+                    {{ message.username }}
+                  </a>
+                  <span class="timestamp">{{ message.timestamp }}</span>
+                </div>
+                <div class="message-text">{{ message.message }}</div>
+              </div>
+              {% if message.username == session['username'] %}
+                <a href="{{ url_for('auth.view_profile', username=message.username) }}">
+                  <img src="{{ message.profile_picture }}" alt="{{ message.username }}'s avatar" class="avatar" data-bs-toggle="tooltip" data-bs-placement="top" title="{{ message.username }}">
+                </a>
+              {% endif %}
+            </div>
+          {% endfor %}
+        </div>
+
+        <!-- Typing Indicator -->
+        <div id="typing-indicator" class="typing-indicator">Someone is typing...</div>
+
+        <!-- Input Section -->
+        <div class="input-section">
+          <input type="text" id="message" placeholder="Type your message here..." autocomplete="off" />
+          <button id="send">Send</button>
+        </div>
+      </div>
     </div>
   </div>
-</header>
 
-<h1>Chatroom: {{ room }}</h1>
+  <!-- Hidden Inputs for current username and room -->
+  <input type="hidden" id="current-username" value="{{ session['username'] }}">
+  <input type="hidden" id="room" value="{{ room }}">
 
-<!-- Hidden input for the current user's username and current room -->
-<input type="hidden" id="current-username" value="{{ session['username'] }}">
-<input type="hidden" id="room" value="{{ room }}">
+  <!-- Bootstrap JS Bundle (includes Popper for tooltips) -->
+  <script 
+    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" 
+    integrity="sha384-kenU1KFdBIe4zVF0s0G1M5b4hcpxyD9F7jL+U3zY4AmoF6Ykvh+8t8enY4K+5q6E" 
+    crossorigin="anonymous">
+  </script>
 
-<!-- Messages Container -->
-<div id="messages">
-  {% for message in chat_history %}
-    <div class="message {% if message.username == session['username'] %}current-user{% endif %}">
-      <img src="{{ message.profile_picture }}" alt="{{ message.username }}'s avatar" class="avatar">
-      <span class="username">{{ message.username }}:</span>
-      <span>{{ message.message }}</span>
-      <span class="timestamp">{{ message.timestamp }}</span>
-    </div>
-  {% endfor %}
-</div>
-
-<!-- Optional: Real-Time Typing Indicator -->
-<div id="typing-indicator" style="display: none; font-style: italic; margin-top: 5px;">
-  <!-- e.g. "Alice is typing..." -->
-</div>
-
-<!-- Chat Controls -->
-<div class="chat-container">
-  <input type="text" id="message" placeholder="Your message" />
-  <button id="send">Send</button>
-</div>
-
-
-
-<script>
-  // Initialize Socket.IO
-  const socket = io();
-  const room = document.getElementById('room').value;
-  const currentUser = document.getElementById('current-username').value;
-
-  // Escape HTML to help prevent XSS
-  function escapeHTML(str) {
-    const div = document.createElement('div');
-    div.appendChild(document.createTextNode(str));
-    return div.innerHTML;
-  }
-
-  // Join the room on page load
-  socket.emit('join', { room });
-
-  // Scroll to bottom on initial load
-  window.onload = function () {
-    const messagesContainer = document.getElementById('messages');
-    messagesContainer.scrollTop = messagesContainer.scrollHeight;
-  };
-
-  // Universal function to send a message
-  function sendMessage() {
-    const msgInput = document.getElementById('message');
-    const text = msgInput.value.trim();
-    if (!text) return;
-
-    // (Optional) Immediately stop typing once the message is sent
-    stopTyping();
-
-    socket.emit('message', { message: text, room });
-    msgInput.value = '';
-  }
-
-  // Send message on "Send" button click
-  document.getElementById('send').addEventListener('click', sendMessage);
-
-  // Send message on "Enter" key press
-  document.getElementById('message').addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      sendMessage();
-    }
-  });
-
-  // Listen for incoming messages
-  socket.on('message', (data) => {
-    const messagesContainer = document.getElementById('messages');
-
-    const messageElement = document.createElement('div');
-    messageElement.classList.add('message');
-    if (data.user === currentUser) {
-      messageElement.classList.add('current-user');
-    }
-
-    // Create avatar image
-    const avatar = document.createElement('img');
-    avatar.src = data.profile_picture || '/static/images/default_avatar.png';
-    avatar.alt = escapeHTML(data.user) + "'s avatar";
-    avatar.classList.add('avatar');
-
-    // Create username span
-    const usernameSpan = document.createElement('span');
-    usernameSpan.classList.add('username');
-    usernameSpan.textContent = escapeHTML(data.user) + ": ";
-
-    // Create message text span
-    const textSpan = document.createElement('span');
-    textSpan.textContent = escapeHTML(data.message);
-
-    // Create timestamp span
-    const timestampSpan = document.createElement('span');
-    timestampSpan.classList.add('timestamp');
-    timestampSpan.textContent = new Date(data.timestamp).toLocaleTimeString();
-
-    // Append elements to message container
-    messageElement.appendChild(avatar);
-    messageElement.appendChild(usernameSpan);
-    messageElement.appendChild(textSpan);
-    messageElement.appendChild(timestampSpan);
-
-    // Append the message to the chat
-    messagesContainer.appendChild(messageElement);
-    messagesContainer.scrollTop = messagesContainer.scrollHeight;
-  });
-
-  /* ==============================
-     TYPING INDICATORS (Optional)
-  ============================== */
-  const typingIndicator = document.getElementById('typing-indicator');
-  let typing = false;
-  let typingTimeout;
-
-  // Trigger "startTyping" whenever user types
-  document.getElementById('message').addEventListener('input', () => {
-    if (!typing) {
-      typing = true;
-      socket.emit('typing', { room });
-    }
-
-    clearTimeout(typingTimeout);
-    typingTimeout = setTimeout(stopTyping, 3000); // after 3s of no input
-  });
-
-  function stopTyping() {
-    if (typing) {
-      typing = false;
-      socket.emit('stop_typing', { room });
-    }
-  }
-
-  // When others in the room are typing
-  socket.on('user_typing', (data) => {
-    const { username, action } = data;
-    if (action === 'typing') {
-      typingIndicator.textContent = `${username} is typing...`;
-      typingIndicator.style.display = 'block';
-    } else if (action === 'stopped') {
-      typingIndicator.textContent = '';
-      typingIndicator.style.display = 'none';
-    }
-  });
-</script>
+  <!-- External JavaScript -->
+  <script src="/static/js/chat.js"></script>
 </body>
 </html>

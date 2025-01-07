@@ -2,96 +2,113 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Choose a Room</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <!-- Google Fonts & CSS -->
+  <!-- Favicon -->
+  <link rel="icon" href="{{ url_for('static', filename='images/favicon.ico') }}" type="image/x-icon">
+  
+  <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link 
     href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" 
-    rel="stylesheet"
-  >
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    rel="stylesheet">
+  
+  <!-- Bootstrap CSS for Spinners and Tooltips -->
+  <link 
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" 
+    rel="stylesheet" 
+    integrity="sha384-ENjdO4Dr2bkBIFxQpeoY6b4UKr3oBlb2qz2H3zjE5R1nldoR4o9Bs0R0LqBMU8Y+" 
+    crossorigin="anonymous"
+  />
+
+  <!-- External CSS -->
+  <link rel="stylesheet" href="/static/css/room_selector.css" />
 </head>
 <body>
-  <!-- Header Section -->
-  <header class="chat-header">
-    <div class="header-content">
-      <span class="current-user">
-        {% if 'username' in session %}
-          Logged in as: <strong>{{ session['username'] }}</strong>
-        {% else %}
-          You are not logged in.
-        {% endif %}
-      </span>
 
-      <div class="button-container">
-        {% if 'user_id' in session %}
-          <!-- If logged in, show Profile/Logout -->
-          <a href="{{ url_for('auth.profile') }}" class="button profile-btn">Profile</a>
-          <a href="{{ url_for('auth.logout') }}" class="button logout-btn">Logout</a>
-        {% else %}
-          <!-- If not logged in, show Login/Register -->
-          <a href="{{ url_for('auth.login') }}" class="button login-btn">Login</a>
-          <a href="{{ url_for('auth.register') }}" class="button register-btn">Register</a>
-        {% endif %}
-      </div>
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="navbar-brand" onclick="window.location.href='{{ url_for('chat.index') }}'">ChatApp</div>
+    <div class="navbar-toggler">&#9776;</div>
+    <div class="navbar-menu">
+      <span>Logged in as:  <strong>{{ session['username'] }}</strong></span>
+      {% if 'user_id' in session %}
+        <a href="{{ url_for('auth.profile') }}">Profile</a>
+        <a href="{{ url_for('auth.logout') }}">Logout</a>
+      {% else %}
+        <a href="{{ url_for('auth.login') }}">Login</a>
+        <a href="{{ url_for('auth.register') }}">Register</a>
+      {% endif %}
+      <a href="{{ url_for('chat.index') }}">Room Selector</a>
     </div>
-  </header>
+  </nav>
 
-  <!-- Main Content -->
-  <main class="room-selector-container">
-    <h1>Welcome to the Chat Application</h1>
+  <!-- Main Container -->
+  <div class="container">
+    <!-- Header Section -->
+    <header class="chat-header">
+      <div class="header-content">
+        <span class="current-user">Logged in as: <strong>{{ session['username'] }}</strong></span>
+        <div class="button-container">
+          <!-- Authentication Buttons -->
+          {% if 'user_id' in session %}
+            <a href="{{ url_for('auth.profile') }}" class="button profile-btn">Profile</a>
+            <a href="{{ url_for('auth.logout') }}" class="button logout-btn">Logout</a>
+          {% else %}
+            <a href="{{ url_for('auth.login') }}" class="button login-btn">Login</a>
+            <a href="{{ url_for('auth.register') }}" class="button register-btn">Register</a>
+          {% endif %}
+        </div>
+      </div>
+    </header>
 
-    <!-- Create Room Button -->
-    <button id="open-modal-btn" class="button create-room-btn">+ Create Room</button>
-
-    <p>Select a room to join:</p>
-    <ul class="room-list">
-      {% for room in rooms %}
-        <li>
-          <!-- Link to the chosen room -->
-          <a href="{{ url_for('chat.room', room=room) }}" class="room-link">{{ room }}</a>
-        </li>
-      {% endfor %}
-    </ul>
-  </main>
-
-  <!-- Modal for Creating a Room (Initially hidden) -->
-  <!-- Use both the 'hidden' attribute (for visual/collapsing in many browsers) and 'aria-hidden' for screen readers -->
-  <div 
-    id="create-room-modal" 
-    class="modal hidden" 
-    hidden 
-    aria-hidden="true" 
-    role="dialog" 
-    aria-modal="true" 
-    aria-labelledby="modal-title"
-  >
-    <div class="modal-content">
-      <button 
-        class="close-btn" 
-        id="close-modal" 
-        aria-label="Close dialog"
-      >
-        &times;
-      </button>
+    <!-- Main Content -->
+    <main class="room-selector-container">
+      <h1>Welcome to the Chat Application</h1>
+      <!-- Create Room Button -->
+      <button id="open-modal-btn" class="button create-room-btn">+ Create Room</button>
+      <p>Select a room to join:</p>
       
-      <h2 id="modal-title">Create a New Room</h2>
+      <!-- Search and Create Room Container -->
+      <div class="search-room-container">
+        <input type="text" id="room-search" placeholder="Search rooms..." aria-label="Search rooms">
+      </div>
 
-      <!-- The form posts to the route handling room creation -->
-      <form action="{{ url_for('rooms.create_room') }}" method="POST">
-        <label for="room">Room Name:</label>
-        <input 
-          type="text" 
-          id="room" 
-          name="room" 
-          placeholder="Enter room name" 
-          required 
-          maxlength="50"
-        >
-        <button type="submit" class="button create-room-submit">Create Room</button>
-      </form>
+      <!-- Loading Indicator for Room List -->
+      <div id="room-list-loading" class="loading-overlay">
+        <div class="spinner-border text-primary" role="status">
+          <span class="visually-hidden">Loading rooms...</span>
+        </div>
+      </div>
+
+      <!-- Room List -->
+      <ul class="room-list" id="room-list">
+        {% if rooms %}
+          {% for room in rooms %}
+            <li>
+              <a href="{{ url_for('chat.room', room=room) }}" class="room-link">{{ room }}</a>
+            </li>
+          {% endfor %}
+        {% else %}
+          <li>No available rooms. Create one!</li>
+        {% endif %}
+      </ul>
+    </main>
+
+    <!-- Modal for Creating a Room -->
+    <div id="create-room-modal" class="modal hidden" aria-hidden="true">
+      <div class="modal-content" role="dialog" aria-labelledby="modal-title">
+        <span class="close-btn" id="close-modal" aria-label="Close">&times;</span>
+        <h2 id="modal-title">Create a New Room</h2>
+        <form id="create-room-form" action="{{ url_for('rooms.create_room') }}" method="POST">
+          <label for="room">Room Name:</label>
+          <input type="text" id="room" name="room" placeholder="Enter room name" required maxlength="50" aria-required="true" aria-label="Room Name">
+          <button type="submit" class="button create-room-submit">Create Room</button>
+          <!-- Error Message Placeholder -->
+          <div id="error-message" class="text-danger mt-2" style="display: none;"></div>
+        </form>
+      </div>
     </div>
   </div>
 
@@ -100,40 +117,14 @@
     <p>&copy; 2024 Chat Application. Built with ❤️ for seamless conversations.</p>
   </footer>
 
-  <!-- JavaScript -->
-  <script>
-    // Grab references to relevant DOM elements
-    const openModalBtn = document.getElementById('open-modal-btn');
-    const modal = document.getElementById('create-room-modal');
-    const closeModalBtn = document.getElementById('close-modal');
-
-    // Show the modal
-    function openModal() {
-      modal.classList.remove('hidden');
-      modal.removeAttribute('hidden');       // remove hidden attribute
-      modal.setAttribute('aria-hidden', 'false');
-    }
-
-    // Hide the modal
-    function hideModal() {
-      modal.classList.add('hidden');
-      modal.setAttribute('hidden', '');      // sets hidden attribute
-      modal.setAttribute('aria-hidden', 'true');
-    }
-
-    // Event: Open the modal
-    openModalBtn.addEventListener('click', openModal);
-
-    // Event: Close the modal when user clicks the 'x' button
-    closeModalBtn.addEventListener('click', hideModal);
-
-    // Event: Close the modal if clicking outside the modal content
-    window.addEventListener('click', (event) => {
-      // Only close if the user clicked on the background (the modal overlay)
-      if (event.target === modal) {
-        hideModal();
-      }
-    });
+  <!-- Bootstrap JS Bundle (includes Popper for tooltips) -->
+  <script 
+    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" 
+    integrity="sha384-kenU1KFdBIe4zVF0s0G1M5b4hcpxyD9F7jL+U3zY4AmoF6Ykvh+8t8enY4K+5q6E" 
+    crossorigin="anonymous">
   </script>
+
+  <!-- External JavaScript -->
+  <script src="/static/js/room_selector.js"></script>
 </body>
 </html>

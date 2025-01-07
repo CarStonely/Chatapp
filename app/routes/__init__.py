@@ -12,4 +12,5 @@ blueprints = [
     chat_bp,
     rooms_bp,
     socket_bp
+    
 ]
