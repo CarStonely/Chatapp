@@ -100,16 +100,39 @@ def handle_join(data):
 def handle_message(data):
     """
     Handle when a user sends a message in a room.
+    Ensures that for DM rooms, the room exists in the `dm_rooms` table
+    before inserting the message.
     """
     username = session.get('username', 'Anonymous')
+    user_id = session.get('user_id')
     message = data.get('message', '').strip()
     room = data.get('room')
     timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
     if message and room:
+        # Check if the room is a DM room
+        if room.startswith('dm_'):
+            try:
+                conn_room = current_app.config['DB_POOL'].get_connection()
+                cursor_room = conn_room.cursor(dictionary=True)
+
+                # Check if the DM room exists in `dm_rooms`
+                cursor_room.execute("SELECT 1 FROM dm_rooms WHERE room_name = %s", (room,))
+                if not cursor_room.fetchone():
+                    print(f"Unauthorized access or non-existent DM room: {room}")
+                    return  # Abort message handling if the room doesn't exist
+
+            except mysql.connector.Error as e:
+                print(f"Error checking DM room existence: {e}")
+                return
+            finally:
+                cursor_room.close()
+                conn_room.close()
+
+        # Fetch profile picture for the sender
         profile_picture = fetch_profile_picture(username)
 
-        # Insert the message into the database
+        # Insert the message into the `messages` table
         conn = current_app.config['DB_POOL'].get_connection()
         cursor = conn.cursor()
         try:
@@ -119,6 +142,7 @@ def handle_message(data):
             """
             cursor.execute(sql, (username, message, room, timestamp))
             conn.commit()
+            print(f"Stored message for room {room}: {message}")
         except mysql.connector.Error as err:
             print(f"Database error during message insertion: {err}")
             conn.rollback()

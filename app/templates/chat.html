@@ -87,7 +87,7 @@
         <ul id="online-users">
           {% for user in all_users %}
             <li data-username="{{ user.username }}" class="d-flex align-items-center mb-3" style="cursor:pointer;">
-              <a href="/profile/{{ user.username }}" data-bs-toggle="tooltip" data-bs-placement="top" title="{{ user.username }}">
+              <a href="{{ url_for('auth.view_profile', username=user.username) }}" data-bs-toggle="tooltip" data-bs-placement="top" title="{{ user.username }}">
                 <img src="{{ user.profile_picture or '/static/images/default_avatar.png' }}" alt="{{ user.username }}'s avatar" class="avatar" style="width:40px;height:40px;margin-right:0.75rem;">
               </a>
               <span class="username">{{ user.username }}</span>

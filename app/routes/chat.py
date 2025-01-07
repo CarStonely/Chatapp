@@ -99,12 +99,21 @@ def direct_message(target_username):
             dm_room_id = room_data['id']
             room_name = room_data['room_name']
         else:
-            # Create a new DM room if it doesn't exist
+            # Generate a unique room name for the DM
             generated_room_name = generate_room_id(current_user_id, target_user['id'])
+
+            # Create a new room in the 'rooms' table to satisfy foreign key constraints
+            cursor.execute("""
+                INSERT INTO rooms (name, created_by, created_at, private) 
+                VALUES (%s, %s, NOW(), 1)
+            """, (generated_room_name, current_user_id))
+            conn.commit()
+
+            # Create a new DM room in 'dm_rooms'
             cursor.execute("INSERT INTO dm_rooms (room_name) VALUES (%s)", (generated_room_name,))
             dm_room_id = cursor.lastrowid
 
-            # Add both users as participants
+            # Add both users as participants in 'dm_room_participants'
             cursor.execute("INSERT INTO dm_room_participants (room_id, user_id) VALUES (%s, %s)", (dm_room_id, current_user_id))
             cursor.execute("INSERT INTO dm_room_participants (room_id, user_id) VALUES (%s, %s)", (dm_room_id, target_user['id']))
             conn.commit()
@@ -137,7 +146,6 @@ def direct_message(target_username):
         cursor.close()
         conn.close()
 
-    # Render chat.html with DM context and a friendly display name
     return render_template(
         'chat.html', 
         room=room_name, 
@@ -146,3 +154,5 @@ def direct_message(target_username):
         all_users=all_users,
         dm_display_name=dm_display_name
     )
+    
+    
