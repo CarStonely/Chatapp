@@ -1,9 +1,11 @@
 // Navbar Toggle for Mobile
 const navbarToggler = document.querySelector('.navbar-toggler');
 const navbarMenu = document.querySelector('.navbar-menu');
-navbarToggler.addEventListener('click', () => {
-  navbarMenu.classList.toggle('active');
-});
+if (navbarToggler && navbarMenu) {
+  navbarToggler.addEventListener('click', () => {
+    navbarMenu.classList.toggle('active');
+  });
+}
 
 // Initialize Bootstrap Tooltips
 document.addEventListener('DOMContentLoaded', () => {
@@ -69,6 +71,48 @@ messageInput.addEventListener('keydown', (e) => {
     sendMessage();
   }
 });
+
+// ===== Image Upload Handling =====
+const attachButton = document.getElementById('attach-button');
+const imageUpload = document.getElementById('image-upload');
+
+attachButton.addEventListener('click', (e) => {
+  e.preventDefault();
+  imageUpload.click();
+});
+
+imageUpload.addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const formData = new FormData();
+  formData.append('image', file);
+
+  try {
+    const response = await fetch('/upload_image', {
+      method: 'POST',
+      body: formData
+    });
+    const data = await response.json();
+
+    if (data.success) {
+      const imageUrl = data.image_url;
+      const message = messageInput.value.trim();
+      socket.emit('message', { 
+        message: message, 
+        room: room, 
+        image_url: imageUrl 
+      });
+      messageInput.value = '';
+      imageUpload.value = '';
+    } else {
+      console.error('Upload failed:', data.error);
+    }
+  } catch (error) {
+    console.error('Error uploading image:', error);
+  }
+});
+// ===== End Image Upload Handling =====
 
 // Typing Indicator Logic
 let typing = false;
@@ -137,9 +181,22 @@ function appendMessage(data, isCurrentUser) {
   timestampSpan.classList.add('timestamp');
   timestampSpan.textContent = data.timestamp || '';
 
+  // Actual message text
   const messageText = document.createElement('div');
   messageText.classList.add('message-text');
   messageText.textContent = data.message || '';
+
+  // Add an image if image_url is present
+  if (data.image_url) {
+    const msgImage = document.createElement('img');
+    msgImage.src = data.image_url;
+    msgImage.alt = 'Attached image';
+    msgImage.classList.add('message-image');
+    msgImage.style.maxWidth = '200px';
+    msgImage.style.display = 'block';
+    msgImage.style.marginTop = '0.5rem';
+    messageText.appendChild(msgImage);
+  }
 
   messageHeader.appendChild(usernameLink);
   messageHeader.appendChild(timestampSpan);
@@ -161,8 +218,10 @@ function appendMessage(data, isCurrentUser) {
   scrollToBottom();
 
   // Reinitialize tooltips for new elements
-  const tooltipTriggerList = [].slice.call(messageElement.querySelectorAll('[data-bs-toggle="tooltip"]'));
-  tooltipTriggerList.map(function (tooltipTriggerEl) {
+  const tooltipTriggerList = [].slice.call(
+    messageElement.querySelectorAll('[data-bs-toggle="tooltip"]')
+  );
+  tooltipTriggerList.forEach(function (tooltipTriggerEl) {
     return new bootstrap.Tooltip(tooltipTriggerEl);
   });
 }

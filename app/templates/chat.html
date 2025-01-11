@@ -7,6 +7,7 @@
   
   <!-- Favicon -->
   <link rel="icon" href="/static/images/favicon.ico" type="image/x-icon" />
+  <script src="https://kit.fontawesome.com/c42fb6de74.js" crossorigin="anonymous"></script>
   
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -121,7 +122,14 @@
                   </a>
                   <span class="timestamp">{{ message.timestamp }}</span>
                 </div>
-                <div class="message-text">{{ message.message }}</div>
+                <div class="message-text">
+                  {{ message.message }}
+                  {% if message.image_url %}
+                    <div class="message-image">
+                      <img src="{{ message.image_url }}" alt="Attached image" style="max-width: 200px; display: block; margin-top: 0.5rem;">
+                    </div>
+                  {% endif %}
+                </div>
               </div>
               {% if message.username == session['username'] %}
                 <a href="{{ url_for('auth.view_profile', username=message.username) }}">
@@ -137,7 +145,9 @@
 
         <!-- Input Section -->
         <div class="input-section">
-          <input type="text" id="message" placeholder="Type your message here..." autocomplete="off" />
+          <input type="text" id="message" placeholder="Type your message..." />
+          <input type="file" id="image-upload" accept="image/*" style="display:none;">
+          <button id="attach-button"><i class="fas fa-image"></i></button>
           <button id="send">Send</button>
         </div>
       </div>

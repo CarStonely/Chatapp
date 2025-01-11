@@ -107,21 +107,20 @@ def handle_message(data):
     user_id = session.get('user_id')
     message = data.get('message', '').strip()
     room = data.get('room')
+    image_url = data.get('image_url', None)  # <--- NEW
     timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
-    if message and room:
-        # Check if the room is a DM room
+    # If text or image (or both) and we have a room
+    if (message or image_url) and room:
+        # For DM rooms, still do your existing check
         if room.startswith('dm_'):
             try:
                 conn_room = current_app.config['DB_POOL'].get_connection()
                 cursor_room = conn_room.cursor(dictionary=True)
-
-                # Check if the DM room exists in `dm_rooms`
                 cursor_room.execute("SELECT 1 FROM dm_rooms WHERE room_name = %s", (room,))
                 if not cursor_room.fetchone():
-                    print(f"Unauthorized access or non-existent DM room: {room}")
-                    return  # Abort message handling if the room doesn't exist
-
+                    print(f"Unauthorized or non-existent DM room: {room}")
+                    return
             except mysql.connector.Error as e:
                 print(f"Error checking DM room existence: {e}")
                 return
@@ -129,7 +128,7 @@ def handle_message(data):
                 cursor_room.close()
                 conn_room.close()
 
-        # Fetch profile picture for the sender
+        # Fetch profile picture (your existing function)
         profile_picture = fetch_profile_picture(username)
 
         # Insert the message into the `messages` table
@@ -137,12 +136,12 @@ def handle_message(data):
         cursor = conn.cursor()
         try:
             sql = """
-                INSERT INTO messages (username, message, room, timestamp)
-                VALUES (%s, %s, %s, %s)
+                INSERT INTO messages (username, message, room, timestamp, image_url)
+                VALUES (%s, %s, %s, %s, %s)
             """
-            cursor.execute(sql, (username, message, room, timestamp))
+            cursor.execute(sql, (username, message, room, timestamp, image_url))
             conn.commit()
-            print(f"Stored message for room {room}: {message}")
+            print(f"Stored message for room {room}: {message or '(image only)'}")
         except mysql.connector.Error as err:
             print(f"Database error during message insertion: {err}")
             conn.rollback()
@@ -155,7 +154,8 @@ def handle_message(data):
             'user': username,
             'message': message,
             'profile_picture': profile_picture,
-            'timestamp': timestamp
+            'timestamp': timestamp,
+            'image_url': image_url  # <--- NEW
         }, room=room)
 
 @socketio.on('leave')

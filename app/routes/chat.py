@@ -1,7 +1,6 @@
 from flask import Blueprint, render_template, current_app, session, redirect, url_for
 import mysql.connector
 
-
 from .socket_events import generate_room_id
 
 chat_bp = Blueprint('chat', __name__)
@@ -27,7 +26,6 @@ def index():
 
     return render_template('room_selector.html', rooms=rooms)
 
-# In your chat_bp route file (e.g., routes/chat.py)
 @chat_bp.route('/<room>')
 def room(room):
     if 'user_id' not in session:
@@ -45,9 +43,9 @@ def room(room):
         if room not in rooms:
             return "Room not found!", 404
 
-        # Fetch chat history for the current room
+        # Fetch chat history for the current room, including image_url
         cursor.execute("""
-            SELECT m.username, m.message, m.timestamp, u.profile_picture
+            SELECT m.username, m.message, m.timestamp, m.image_url, u.profile_picture
             FROM messages m
             JOIN users u ON m.username = u.username
             WHERE m.room = %s
@@ -120,9 +118,9 @@ def direct_message(target_username):
 
             room_name = generated_room_name
 
-        # Fetch DM message history for this room
+        # Fetch DM message history for this room, including image_url
         cursor.execute("""
-            SELECT m.username, m.message, m.timestamp, u.profile_picture
+            SELECT m.username, m.message, m.timestamp, m.image_url, u.profile_picture
             FROM messages m
             JOIN users u ON m.username = u.username
             WHERE m.room = %s
@@ -154,5 +152,3 @@ def direct_message(target_username):
         all_users=all_users,
         dm_display_name=dm_display_name
     )
-    
-    
